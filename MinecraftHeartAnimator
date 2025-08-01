@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Minecraft Heart Animator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Minecraft', monospace;
+        }
+
+        .description {
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .container {
+            width: 400px;
+            height: 450px;
+            position: relative;
+            margin-bottom: 20px;
+            image-rendering: pixelated;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .text-display {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            color: #fff;
+            opacity: 0;
+            text-shadow: 2px 2px 0 #000;
+            letter-spacing: 1px;
+        }
+
+        @font-face {
+            font-family: 'Minecraft';
+            src: url('https://assets.codepen.io/4175254/Minecraft.woff2') format('woff2');
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background-color: #fff;
+            vertical-align: middle;
+            margin-left: 5px;
+            animation: blink 0.7s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 400px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            background-color: #333;
+            border: 2px solid #555;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+            font-family: 'Minecraft', monospace;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            background: linear-gradient(45deg, #5a9bd5, #3a7bb5);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 0 #2a5a8a;
+            font-family: 'Minecraft', monospace;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #2a5a8a;
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 0 #2a5a8a;
+        }
+
+        .animation-info {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="description">
+        <h1>Ultimate Minecraft Heart Animator</h1>
+        <p>Создай уникальную анимацию пиксельного сердечка! Нажми "Создать анимацию" для генерации случайного эффекта или "Скачать GIF" чтобы сохранить результат.</p>
+    </div>
+
+    <div class="container">
+        <canvas id="heartCanvas"></canvas>
+        <div class="text-display" id="textDisplay"></div>
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <input type="text" id="textInput" placeholder="Введите текст" value="Люблю Майнкрафт">
+        </div>
+        <div class="buttons">
+            <button id="generateBtn">✨ Создать анимацию</button>
+            <button id="downloadBtn">↓ Скачать GIF</button>
+        </div>
+        <div class="animation-info" id="animationInfo"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('heartCanvas');
+            const ctx = canvas.getContext('2d');
+            const textDisplay = document.getElementById('textDisplay');
+            const textInput = document.getElementById('textInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const animationInfo = document.getElementById('animationInfo');
+
+            // Установка размеров canvas
+            canvas.width = 400;
+            canvas.height = 400;
+
+            // Пиксельное сердечко (16x16)
+            const heartPixels = [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+                [0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+                [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+            ];
+
+            // Параметры анимации
+            let animationId;
+            let gifFrames = [];
+            let isRecording = false;
+            let text = 'Люблю Майнкрафт';
+            let currentText = '';
+            let textIndex = 0;
+            let cursorVisible = true;
+            let cursorInterval;
+            const pixelSize = 20;
+            let animationDuration;
+            let currentAnimationType;
+            let heartColor, heartBorderColor;
+            let usedAnimations = [];
+            let currentAnimationName = '';
+
+            // Все возможные анимации
+            const allAnimations = {
+                // Спиральное появление
+                spiral: {
+                    name: "Спираль",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const scale = easeOutElastic(pixelProgress);
+                        const rotation = pixelProgress * Math.PI * 2;
+                        const offsetX = Math.sin(rotation) * 5 * (1 - pixelProgress);
+                        const offsetY = Math.cos(rotation) * 5 * (1 - pixelProgress);
+                        
+                        ctx.save();
+                        ctx.translate(posX + pixelSize/2 + offsetX, posY + pixelSize/2 + offsetY);
+                        ctx.rotate(rotation);
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(-pixelSize/2, -pixelSize/2, pixelSize, pixelSize);
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(-pixelSize/2, -pixelSize/2, pixelSize, pixelSize);
+                        ctx.restore();
+                    },
+                    duration: () => 2000 + Math.random() * 1000
+                },
+                
+                // Эффект падения
+                fall: {
+                    name: "Падение",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const fallDistance = 20 * (1 - pixelProgress);
+                        const scale = easeOutBounce(pixelProgress);
+                        
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(
+                            posX,
+                            posY - fallDistance + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX,
+                            posY - fallDistance + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 2500 + Math.random() * 1000
+                },
+                
+                // Эффект всплытия
+                float: {
+                    name: "Всплытие",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const scale = easeOutBack(pixelProgress);
+                        const alpha = pixelProgress * 0.7 + 0.3;
+                        
+                        ctx.fillStyle = hexToRGBA(heartColor, alpha);
+                        ctx.fillRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = hexToRGBA(heartBorderColor, alpha);
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 3000 + Math.random() * 1000
+                },
+                
+                // Появление по рядам
+                rows: {
+                    name: "Ряды",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const rowProgress = Math.min(1, pixelProgress * 1.5);
+                        const scale = rowProgress;
+                        
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 3500 + Math.random() * 1000
+                },
+                
+                // Случайные пиксели
+                random: {
+                    name: "Случайные",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const scale = easeOutBack(pixelProgress);
+                        const jitterX = (Math.random() - 0.5) * 5 * (1 - pixelProgress);
+                        const jitterY = (Math.random() - 0.5) * 5 * (1 - pixelProgress);
+                        
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(
+                            posX + (pixelSize * (1 - scale)) / 2 + jitterX,
+                            posY + (pixelSize * (1 - scale)) / 2 + jitterY,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX + (pixelSize * (1 - scale)) / 2 + jitterX,
+                            posY + (pixelSize * (1 - scale)) / 2 + jitterY,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 4000 + Math.random() * 1000
+                },
+                
+                // Появление из центра
+                center: {
+                    name: "Из центра",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2 - 20;
+                        const dx = posX + pixelSize/2 - centerX;
+                        const dy = posY + pixelSize/2 - centerY;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        const maxDistance = Math.sqrt(centerX*centerX + centerY*centerY);
+                        const distanceProgress = Math.min(1, distance / maxDistance);
+                        const delay = distanceProgress * 0.8;
+                        const scale = easeOutBack(Math.max(0, (pixelProgress - delay) / (1 - delay)));
+                        
+                        if (pixelProgress > delay) {
+                            ctx.fillStyle = heartColor;
+                            ctx.fillRect(
+                                posX + (pixelSize * (1 - scale)) / 2,
+                                posY + (pixelSize * (1 - scale)) / 2,
+                                pixelSize * scale,
+                                pixelSize * scale
+                            );
+                            
+                            ctx.strokeStyle = heartBorderColor;
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(
+                                posX + (pixelSize * (1 - scale)) / 2,
+                                posY + (pixelSize * (1 - scale)) / 2,
+                                pixelSize * scale,
+                                pixelSize * scale
+                            );
+                        }
+                    },
+                    duration: () => 4500 + Math.random() * 1000
+                },
+                
+                // Волновой эффект
+                wave: {
+                    name: "Волна",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const wavePos = posX / canvas.width * Math.PI * 2;
+                        const waveOffset = Math.sin(wavePos + progress * Math.PI * 4) * 5;
+                        const scale = easeOutBack(pixelProgress);
+                        
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2 + waveOffset * (1 - pixelProgress),
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY + (pixelSize * (1 - scale)) / 2 + waveOffset * (1 - pixelProgress),
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 5000 + Math.random() * 1000
+                },
+                
+                // Эффект дождя
+                rain: {
+                    name: "Дождь",
+                    draw: function(progress, posX, posY, pixelProgress) {
+                        const dropSpeed = 0.5 + Math.random() * 0.5;
+                        const dropProgress = Math.min(1, pixelProgress * dropSpeed);
+                        const scale = easeOutBack(dropProgress);
+                        
+                        ctx.fillStyle = heartColor;
+                        ctx.fillRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY - 50 * (1 - dropProgress) + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                        
+                        ctx.strokeStyle = heartBorderColor;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            posX + (pixelSize * (1 - scale)) / 2,
+                            posY - 50 * (1 - dropProgress) + (pixelSize * (1 - scale)) / 2,
+                            pixelSize * scale,
+                            pixelSize * scale
+                        );
+                    },
+                    duration: () => 5500 + Math.random() * 1000
+                }
+            };
+
+            // Цветовые схемы
+            const colorSchemes = [
+                {main: '#ff5555', border: '#ff0000'}, // Красный
+                {main: '#55ff55', border: '#00ff00'}, // Зеленый
+                {main: '#5555ff', border: '#0000ff'}, // Синий
+                {main: '#ffff55', border: '#ffff00'}, // Желтый
+                {main: '#ff55ff', border: '#ff00ff'}, // Розовый
+                {main: '#55ffff', border: '#00ffff'}, // Бирюзовый
+                {main: '#ffaa55', border: '#ff8800'}  // Оранжевый
+            ];
+
+            // Функции плавности
+            function easeOutElastic(x) {
+                const c4 = (2 * Math.PI) / 3;
+                return x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
+            }
+            
+            function easeOutBounce(x) {
+                const n1 = 7.5625;
+                const d1 = 2.75;
+                
+                if (x < 1 / d1) {
+                    return n1 * x * x;
+                } else if (x < 2 / d1) {
+                    return n1 * (x -= 1.5 / d1) * x + 0.75;
+                } else if (x < 2.5 / d1) {
+                    return n1 * (x -= 2.25 / d1) * x + 0.9375;
+                } else {
+                    return n1 * (x -= 2.625 / d1) * x + 0.984375;
+                }
+            }
+            
+            function easeOutBack(x) {
+                const c1 = 1.70158;
+                const c3 = c1 + 1;
+                return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+            }
+            
+            function hexToRGBA(hex, alpha) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+            // Получить случайную анимацию, которая еще не использовалась
+            function getRandomAnimation() {
+                const availableAnimations = Object.keys(allAnimations).filter(
+                    anim => !usedAnimations.includes(anim)
+                );
+                
+                // Если все анимации использовались, сбросим список
+                if (availableAnimations.length === 0) {
+                    usedAnimations = [];
+                    return getRandomAnimation();
+                }
+                
+                const randomAnim = availableAnimations[Math.floor(Math.random() * availableAnimations.length)];
+                usedAnimations.push(randomAnim);
+                return randomAnim;
+            }
+
+            // Инициализация случайных параметров
+            function initRandomParams() {
+                // Случайный тип анимации
+                const animKey = getRandomAnimation();
+                currentAnimationType = animKey;
+                currentAnimationName = allAnimations[animKey].name;
+                
+                // Случайная цветовая схема
+                const colors = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
+                heartColor = colors.main;
+                heartBorderColor = colors.border;
+                
+                // Случайная длительность анимации
+                animationDuration = allAnimations[animKey].duration();
+                
+                // Обновляем информацию об анимации
+                animationInfo.textContent = `Анимация: ${currentAnimationName} | Цвет: ${heartColor}`;
+            }
+
+            // Очистка canvas
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Рисует сердечко с анимацией
+            function drawHeart(progress) {
+                clearCanvas();
+                
+                const centerX = canvas.width / 2 - (heartPixels[0].length * pixelSize) / 2;
+                const centerY = canvas.height / 2 - (heartPixels.length * pixelSize) / 2 - 20;
+                
+                const totalPixels = heartPixels.flat().filter(p => p === 1).length;
+                const pixelsToDraw = Math.floor(totalPixels * progress);
+                
+                let drawnPixels = 0;
+                
+                for (let y = 0; y < heartPixels.length; y++) {
+                    for (let x = 0; x < heartPixels[y].length; x++) {
+                        if (heartPixels[y][x] === 1) {
+                            drawnPixels++;
+                            if (drawnPixels <= pixelsToDraw) {
+                                const delay = (x + y) / (heartPixels.length + heartPixels[0].length);
+                                const pixelProgress = Math.min(1, Math.max(0, (progress - delay * 0.3) * 1.5));
+                                
+                                if (pixelProgress > 0) {
+                                    const posX = centerX + x * pixelSize;
+                                    const posY = centerY + y * pixelSize;
+                                    allAnimations[currentAnimationType].draw(progress, posX, posY, pixelProgress);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Анимация текста
+            function animateText(progress) {
+                const charsToShow = Math.floor(text.length * progress);
+                currentText = text.substring(0, charsToShow);
+                textDisplay.textContent = currentText;
+                
+                if (progress >= 1) {
+                    textDisplay.innerHTML = text + '<span class="cursor"></span>';
+                    if (!cursorInterval) {
+                        startCursorAnimation();
+                    }
+                }
+            }
+
+            // Анимация курсора
+            function startCursorAnimation() {
+                clearInterval(cursorInterval);
+                cursorInterval = setInterval(() => {
+                    cursorVisible = !cursorVisible;
+                    const cursor = textDisplay.querySelector('.cursor');
+                    if (cursor) {
+                        cursor.style.opacity = cursorVisible ? '1' : '0';
+                    }
+                }, 500);
+            }
+
+            // Захват кадра для GIF
+            function captureFrame() {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 400;
+                tempCanvas.height = 450;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Фон
+                tempCtx.fillStyle = '#1a1a1a';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // Сердечко
+                tempCtx.drawImage(canvas, 0, 0);
+                
+                // Текст
+                tempCtx.font = '24px Minecraft';
+                tempCtx.fillStyle = '#fff';
+                tempCtx.textAlign = 'center';
+                tempCtx.textBaseline = 'top';
+                tempCtx.fillText(currentText, tempCanvas.width / 2, 410);
+                
+                // Курсор
+                if (currentText.length === text.length) {
+                    const textWidth = tempCtx.measureText(currentText).width;
+                    tempCtx.fillRect(tempCanvas.width / 2 + textWidth / 2 + 5, 410, 4, 24);
+                }
+                
+                gifFrames.push(tempCanvas);
+            }
+
+            // Основная анимация
+            function animate() {
+                initRandomParams();
+                clearCanvas();
+                textDisplay.style.opacity = '0';
+                clearInterval(cursorInterval);
+                cursorInterval = null;
+                gifFrames = [];
+                
+                const startTime = performance.now();
+                
+                function frame(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(1, elapsed / animationDuration);
+                    
+                    // Рисование сердечка
+                    if (progress < 0.7) {
+                        drawHeart(progress / 0.7);
+                    } else {
+                        drawHeart(1);
+                        textDisplay.style.opacity = '1';
+                        animateText((progress - 0.7) / 0.3);
+                    }
+                    
+                    // Захват кадров для GIF
+                    if (isRecording && elapsed % 70 < 16) {
+                        captureFrame();
+                    }
+                    
+                    if (progress < 1) {
+                        animationId = requestAnimationFrame(frame);
+                    } else {
+                        if (isRecording) {
+                            createGIF();
+                            isRecording = false;
+                        }
+                    }
+                }
+                
+                animationId = requestAnimationFrame(frame);
+            }
+
+            // Создание GIF
+            function createGIF() {
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: 400,
+                    height: 450,
+                    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js/dist/gif.worker.js'
+                });
+                
+                // Добавляем все кадры
+                for (let i = 0; i < gifFrames.length; i++) {
+                    const delay = i === gifFrames.length - 1 ? 500 : 50;
+                    gif.addFrame(gifFrames[i], {delay: delay, copy: true});
+                }
+                
+                gif.on('finished', function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `minecraft_heart_${currentAnimationName.toLowerCase()}_${Date.now()}.gif`;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                });
+                
+                gif.render();
+            }
+
+            // Инициализация
+            generateBtn.addEventListener('click', function() {
+                text = textInput.value || 'Люблю Майнкрафт';
+                isRecording = false;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                animate();
+            });
+
+            downloadBtn.addEventListener('click', function() {
+                text = textInput.value || 'Люблю Майнкрафт';
+                isRecording = true;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                animate();
+            });
+
+            // Первая анимация при загрузке (но не запускается автоматически)
+            initRandomParams();
+            animationInfo.textContent = "Нажмите 'Создать анимацию' для старта";
+        });
+    </script>
+</body>
+</html>
